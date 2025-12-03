@@ -10,11 +10,35 @@ dotenv.config()
 // 初始化
 const app = express()
 const prisma = new PrismaClient()
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3001
 
 // 中间件
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // 允许所有本地开发环境端口
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:5176'
+    ];
+    
+    // 允许来自环境变量配置的URL
+    if (process.env.FRONTEND_URL) {
+      allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+    
+    // 允许没有origin的请求（如移动端或curl请求）
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }))
 app.use(express.json())
@@ -32,6 +56,13 @@ app.get('/api/health', (req, res) => {
 // 用户路由
 import authRouter from './routes/auth'
 app.use('/api/auth', authRouter)
+
+// 合同路由
+import contractRouter from './routes/contracts'
+app.use('/api/contracts', contractRouter)
+
+// 静态文件服务（用于文件下载）
+app.use('/uploads', express.static('uploads'))
 
 // 错误处理中间件
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

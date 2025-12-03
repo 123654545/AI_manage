@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -44,10 +44,10 @@ model ContractAnalysis {
   id             String    @id @default(uuid())
   contractId     String    @unique
   contract       Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  extractedText  String    @db.Text
-  keyTerms       Json
-  riskPoints     Json
-  keyDates       Json
+  extractedText  String
+  keyTerms       String    // JSON string
+  riskPoints     String    // JSON string
+  keyDates       String    // JSON string
   analyzedAt     DateTime  @default(now())
   aiModel        String
   

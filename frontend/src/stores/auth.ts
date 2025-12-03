@@ -2,40 +2,84 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { User } from '@/types/user'
-
-// 先使用本地存储模拟
-const mockUser = {
-  id: '1',
-  email: 'test@example.com'
-}
+import { authAPI } from '@/services/api'
+import { MessagePlugin } from 'tdesign-vue-next'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(mockUser)
+  const user = ref<User | null>(null)
   const token = ref<string | null>(localStorage.getItem('token'))
   const isAuthenticated = ref<boolean>(!!token.value)
 
-  const login = async (email: string, password: string) => {
-    // 先使用模拟登录，等后端正常后再对接
-    console.log('模拟登录:', email, password)
-    
-    user.value = { id: '1', email }
-    token.value = 'mock-jwt-token-for-test'
-    isAuthenticated.value = true
-    localStorage.setItem('token', token.value)
-    
-    return { success: true }
+  // 初始化时检查token有效性
+  const checkAuth = async () => {
+    if (token.value) {
+      try {
+        const response = await authAPI.getCurrentUser()
+        user.value = response.data
+        isAuthenticated.value = true
+      } catch (error) {
+        // token无效，清除认证状态
+        logout()
+      }
+    }
   }
 
-  const logout = () => {
-    user.value = null
-    token.value = null
-    isAuthenticated.value = false
-    localStorage.removeItem('token')
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await authAPI.login(email, password)
+      
+      if (response.success) {
+        user.value = response.data.user
+        token.value = response.data.token
+        isAuthenticated.value = true
+        localStorage.setItem('token', token.value)
+        
+        return { success: true }
+      } else {
+        return { success: false, message: response.error }
+      }
+    } catch (error: any) {
+      console.error('登录失败:', error)
+      return { 
+        success: false, 
+        message: error.message || '登录失败，请重试' 
+      }
+    }
+  }
+
+  const logout = async () => {
+    try {
+      // 调用后端登出接口
+      if (token.value) {
+        await authAPI.logout()
+      }
+    } catch (error) {
+      console.error('登出接口调用失败:', error)
+    } finally {
+      // 无论接口是否成功，都清除本地状态
+      user.value = null
+      token.value = null
+      isAuthenticated.value = false
+      localStorage.removeItem('token')
+    }
   }
 
   const register = async (email: string, password: string) => {
-    console.log('模拟注册:', email, password)
-    return { success: true }
+    try {
+      const response = await authAPI.register(email, password)
+      
+      if (response.success) {
+        return { success: true, message: '注册成功，请登录' }
+      } else {
+        return { success: false, message: response.error }
+      }
+    } catch (error: any) {
+      console.error('注册失败:', error)
+      return { 
+        success: false, 
+        message: error.message || '注册失败，请重试' 
+      }
+    }
   }
 
   return {
@@ -44,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     logout,
-    register
+    register,
+    checkAuth
   }
 })

@@ -7,7 +7,9 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login'
+      name: 'welcome',
+      component: () => import('@/views/WelcomeView.vue'),
+      meta: { requiresGuest: true }
     },
     {
       path: '/login',
@@ -28,8 +30,26 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/upload',
+      name: 'upload',
+      component: () => import('@/views/UploadView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/contracts',
+      name: 'contracts',
+      component: () => import('@/views/ContractsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/contracts/:id',
+      name: 'contract-detail',
+      component: () => import('@/views/ContractDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/:pathMatch(.*)*',
-      redirect: '/login'
+      redirect: '/'
     }
   ]
 })
@@ -40,7 +60,7 @@ router.beforeEach((to, from, next) => {
   const isAuthenticated = authStore.isAuthenticated
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
+    next('/')
   } else if (to.meta.requiresGuest && isAuthenticated) {
     next('/dashboard')
   } else {
